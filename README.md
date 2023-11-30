@@ -1,4 +1,4 @@
-# quarkus-high-off-heap-mem-usage
+# quarkus-db-grpc-streaming
 
 Simple project to reproduce a suspicious behavior when trying to stream data from a database to a gRPC client.
 
