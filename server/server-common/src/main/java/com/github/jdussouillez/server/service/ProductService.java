@@ -3,20 +3,17 @@ package com.github.jdussouillez.server.service;
 import com.github.jdussouillez.server.bean.Product;
 import static com.github.jdussouillez.server.jooq.Product.PRODUCT;
 import io.smallrye.mutiny.Multi;
-import io.vertx.mutiny.sqlclient.Row;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jooq.DSLContext;
 import org.jooq.TableField;
+import org.jooq.Record;
 
 @ApplicationScoped
 public class ProductService {
 
     @Inject
     protected DSLContext dslContext;
-
-    @Inject
-    protected SqlService sqlService;
 
     public Multi<Product> getAll(final Integer limit) {
         var query = dslContext
@@ -34,9 +31,8 @@ public class ProductService {
         if (limit != null) {
             query.limit(limit);
         }
-        return sqlService.select(
-            query,
-            row -> new Product()
+        return Multi.createFrom().publisher(query)
+            .map(row -> new Product()
                 .id(get(row, PRODUCT.PRODUCTS.ID))
                 .designation(get(row, PRODUCT.PRODUCTS.DESIGNATION))
                 .stock(get(row, PRODUCT.PRODUCTS.STOCK))
@@ -45,10 +41,10 @@ public class ProductService {
                 .weight(get(row, PRODUCT.PRODUCTS.WEIGHT))
                 .volume(get(row, PRODUCT.PRODUCTS.VOLUME))
                 .obsolete(get(row, PRODUCT.PRODUCTS.OBSOLETE))
-        );
+            );
     }
 
-    private static <T> T get(final Row row, final TableField<?, T> field) {
-        return row.get(field.getType(), field.getName());
+    private static <T> T get(final Record row, final TableField<?, T> field) {
+        return row.get(field);
     }
 }

@@ -7,6 +7,8 @@ Quarkus discussions:
 
 **Fix: streaming is not automatic, we have to explicitelly tell the statement to stream the result. Use branch [`streaming-fix`](https://github.com/jdussouillez/quarkus-db-grpc-streaming) for a working streaming server. [Fix commit](https://github.com/jdussouillez/quarkus-db-grpc-streaming/commit/dfa03d5e926c462ed5dc745f178dab7ed8d59884)**
 
+**This branch is a test to check if R2DBC and Quarkus-jooq streams (our old implementation). It does stream.**
+
 -----
 
 The client opens a gRPC connection to the server to fetch some data (from a database). Then the client persists those data into its own database.
