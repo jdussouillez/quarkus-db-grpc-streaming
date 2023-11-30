@@ -2,6 +2,10 @@
 
 Simple project to reproduce a suspicious behavior when trying to stream data from a database to a gRPC client.
 
+Quarkus discussions:
+- https://github.com/quarkusio/quarkus/discussions/37420
+
+
 The client opens a gRPC connection to the server to fetch some data (from a database). Then the client persists those data into its own database.
 
 - [Reactive SQL client](https://quarkus.io/guides/reactive-sql-clients)
