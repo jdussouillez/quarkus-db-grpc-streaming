@@ -111,8 +111,6 @@ cd server \
     && cd ..
 ```
 
-The OCI images are only built locally with name `quarkus-high-off-heap-mem-usage/(server or client)`.
-
 ## Run
 
 ```sh
