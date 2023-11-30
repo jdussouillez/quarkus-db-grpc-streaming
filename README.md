@@ -5,6 +5,9 @@ Simple project to reproduce a suspicious behavior when trying to stream data fro
 Quarkus discussions:
 - https://github.com/quarkusio/quarkus/discussions/37420
 
+**Fix: streaming is not automatic, we have to explicitelly tell the statement to stream the result. Use branch [`streaming-fix`](https://github.com/jdussouillez/quarkus-db-grpc-streaming) for a working streaming server. [Fix commit](https://github.com/jdussouillez/quarkus-db-grpc-streaming/commit/dfa03d5e926c462ed5dc745f178dab7ed8d59884)**
+
+-----
 
 The client opens a gRPC connection to the server to fetch some data (from a database). Then the client persists those data into its own database.
 
