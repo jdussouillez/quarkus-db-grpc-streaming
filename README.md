@@ -128,11 +128,23 @@ java -Xms512m -Xmx512m \
     -XX:StartFlightRecording=filename=/tmp/client.jfr \
     -jar client/target/quarkus-app/quarkus-run.jar
 
-# Client, but fetch only 100k products
+# Client, but fetch only 50k products - heap memory does not reach its max on the server side so everything works fine
 java -Xms512m -Xmx512m \
     -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp \
     -XX:StartFlightRecording=filename=/tmp/client.jfr \
-    -jar client/target/quarkus-app/quarkus-run.jar 100000
+    -jar client/target/quarkus-app/quarkus-run.jar 50000
+```
+
+### With another client
+
+We can also use `grpcurl` to reproduce the issue.
+
+```sh
+# Start server with dev mode to enable gRPC reflection service
+$ cd server && ./mvnw -Djvm.args="-Xms512m -Xmx512m" -pl server-rpc -am quarkus:dev
+
+# Send a request using grpcurl
+$ docker run --rm --network host fullstorydev/grpcurl -plaintext -d '{}' localhost:1501 com.github.jdussouillez.api.grpc.ProductGrpcApiService/GetAll
 ```
 
 ## Cleanup
