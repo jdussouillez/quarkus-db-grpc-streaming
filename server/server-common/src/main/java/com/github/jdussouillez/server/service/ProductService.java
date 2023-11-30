@@ -34,7 +34,7 @@ public class ProductService {
         if (limit != null) {
             query.limit(limit);
         }
-        return sqlService.select(
+        return sqlService.selectStream(
             query,
             row -> new Product()
                 .id(get(row, PRODUCT.PRODUCTS.ID))
