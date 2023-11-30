@@ -1,8 +1,40 @@
 # quarkus-high-off-heap-mem-usage
 
-Simple project to reproduce a suspicious behavior where the off heap memory seems to go wild.
+Simple project to reproduce a suspicious behavior when trying to stream data from a database to a gRPC client.
 
-See https://github.com/quarkusio/quarkus/discussions/36691
+The client opens a gRPC connection to the server to fetch some data (from a database). Then the client persists those data into its own database.
+
+- [Reactive SQL client](https://quarkus.io/guides/reactive-sql-clients)
+- [gRPC](https://quarkus.io/guides/grpc-getting-started)
+
+*Based on https://github.com/jdussouillez/quarkus-high-off-heap-mem-usage*
+
+## Expected behavior
+
+The SQL client and gRPC both handle streaming. So the expected behavior is that data are streaming from the server database to the client database.
+
+The client gets data from the server and persists them while the server is still reading data from its own database.
+
+The heap memory of the applications can be relatively small as data are streaming and not loaded all at once.
+
+## Current behavior
+
+It seems that all data (1 million "Product" rows in db) are loaded in heap memory on the server side and then sent to the client.
+With 512 MB heap memory it ends with "OOM: Java heap space" because all data are loaded in the heap and takes 71.4% of the heap (365MB for a 512MB heap).
+
+This should not happen because the data must be streaming. But the server reads all entities from the db all at once.
+
+Servers logs:
+```
+Java.lang.OutOfMemoryError: Java heap space
+Dumping heap to /tmp/java_pid247913.hprof ...
+
+Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread "vertx-blocked-thread-checker"
+```
+
+Heap dump generated on the server when the OOM error is triggered:
+
+![Server heap dump](./assets/oom-server-heap.png)
 
 ## Architecture
 
@@ -47,13 +79,13 @@ docker run -d \
 Create the databases and insert data (in the server db only):
 
 ```sh
-PGPASSWORD=bar && \
-    psql -h localhost -p 5432 -U foo -f db/init.sql && \
-    psql -h localhost -p 5432 -U foo -d client -f db/client-init.sql && \
-    psql -h localhost -p 5432 -U foo -d server -f db/server-init.sql && \
-    unzip db/server-data.sql.zip -d db/ && \
-    psql -h localhost -p 5432 -U foo -d server -f db/server-data.sql -q -1 \
-    rm db/server-data.sql
+PGPASSWORD=bar \
+    && psql -h localhost -p 5432 -U foo -f db/init.sql \
+    && psql -h localhost -p 5432 -U foo -d client -f db/client-init.sql \
+    && psql -h localhost -p 5432 -U foo -d server -f db/server-init.sql \
+    && unzip db/server-data.sql.zip -d db/ \
+    && psql -h localhost -p 5432 -U foo -d server -f db/server-data.sql -q -1 \
+    && rm db/server-data.sql
 ```
 
 **Optional**: To generate another set of data, use:
@@ -69,12 +101,14 @@ PGPASSWORD=bar && \
 cd spec && ./mvnw clean install && cd ..
 ```
 
-3. Build the server and client OCI images
+3. Build the server
 
 ```sh
-cd server && ./mvnw clean package -Dquarkus.container-image.build=true && \
-    cd ../client && ./mvnw clean package -Dquarkus.container-image.build=true && \
-    cd ..
+cd server \
+    && ./mvnw clean package \
+    && cd ../client \
+    && ./mvnw clean package \
+    && cd ..
 ```
 
 The OCI images are only built locally with name `quarkus-high-off-heap-mem-usage/(server or client)`.
@@ -83,49 +117,29 @@ The OCI images are only built locally with name `quarkus-high-off-heap-mem-usage
 
 ```sh
 # Server
-docker run \
-    --rm \
-    --network host \
-    --name server \
-    -m 1024m \
-    --cpus=2 \
-    -e JAVA_OPTS="-Xms512m -Xmx512m" \
-    -v /tmp:/tmp \
-    quarkus-high-off-heap-mem-usage/server:1.0.0-SNAPSHOT
+java -Xms512m -Xmx512m \
+    -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp \
+    -XX:StartFlightRecording=filename=/tmp/server.jfr \
+    -jar server/server-rpc/target/quarkus-app/quarkus-run.jar
 ```
 
 ```sh
 # Client
-docker run \
-    --rm \
-    --network host \
-    --name client \
-    -m 1024m \
-    --cpus=2 \
-    -e JAVA_OPTS="-Xms512m -Xmx512m" \
-    -v /tmp:/tmp \
-    quarkus-high-off-heap-mem-usage/client:1.0.0-SNAPSHOT
+java -Xms512m -Xmx512m \
+    -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp \
+    -XX:StartFlightRecording=filename=/tmp/client.jfr \
+    -jar client/target/quarkus-app/quarkus-run.jar
 
 # Client, but fetch only 100k products
-docker run \
-    --rm \
-    --network host \
-    --name client \
-    -m 1024m \
-    --cpus=2 \
-    -e JAVA_OPTS="-Xms512m -Xmx512m" \
-    -v /tmp:/tmp \
-    quarkus-high-off-heap-mem-usage/client:1.0.0-SNAPSHOT \
-    100000
+java -Xms512m -Xmx512m \
+    -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp \
+    -XX:StartFlightRecording=filename=/tmp/client.jfr \
+    -jar client/target/quarkus-app/quarkus-run.jar 100000
 ```
 
 ## Cleanup
 
 ```sh
-docker rm --force server \
-    && docker rm --force client \
-    && docker rm --force db \
-    && docker rmi quarkus-high-off-heap-mem-usage/server:1.0.0-SNAPSHOT -f \
-    && docker rmi quarkus-high-off-heap-mem-usage/client:1.0.0-SNAPSHOT -f \
+docker rm --force db \
     && docker rmi postgres:15-bullseye
 ```
