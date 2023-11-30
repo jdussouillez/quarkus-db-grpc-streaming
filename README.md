@@ -13,7 +13,7 @@ The client opens a gRPC connection to the server to fetch some data (from a data
 
 The SQL client and gRPC both handle streaming. So the expected behavior is that data are streaming from the server database to the client database.
 
-The client gets data from the server and persists them while the server is still reading data from its own database.
+The client gets data from the server and persists them while the server is still reading data from its own database and sending them to the client.
 
 The heap memory of the applications can be relatively small as data are streaming and not loaded all at once.
 
