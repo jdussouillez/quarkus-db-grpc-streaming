@@ -63,7 +63,7 @@ Note:
 
 ## Build
 
-1. Start the database
+### 1. Start the database server
 
 ```sh
 docker run -d \
@@ -95,13 +95,13 @@ PGPASSWORD=bar \
     && PGPASSWORD=bar psql -h localhost -p 5432 -U foo -d server -f db/server-data.sql -q -1
 ```
 
-2. Build the spec project
+### 2. Build the spec project
 
 ```sh
 cd spec && ./mvnw clean install && cd ..
 ```
 
-3. Build the server
+### 3. Build the server
 
 ```sh
 cd server \
